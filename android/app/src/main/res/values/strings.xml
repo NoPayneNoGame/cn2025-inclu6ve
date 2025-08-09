@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Alerto</string>
+    <string name="title_activity_main">Alerto</string>
+    <string name="package_name">com.inclu6ve.alerto</string>
+    <string name="custom_url_scheme">com.inclu6ve.alerto</string>
+</resources>

@@ -1,0 +1,7 @@
+{
+  "name": "inclu6ve-alerto",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
