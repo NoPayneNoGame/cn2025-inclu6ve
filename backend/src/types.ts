@@ -7,7 +7,7 @@ export enum EmergencyLevel {
   Moderate = "Moderate",
   High = "High",
   Severe = "Severe",
-  Extreme = "Extreme",
+  Extreme = "Extreme"
 }
 
 /**
@@ -24,7 +24,7 @@ export enum EmergencyType {
   Cyclone = "Cyclone",
   ExtremeHeat = "Extreme Heat",
   Earthquake = "Earthquake",
-  Other = "Other",
+  Other = "Other"
 }
 
 /**

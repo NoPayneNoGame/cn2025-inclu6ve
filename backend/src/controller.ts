@@ -27,11 +27,11 @@ function isEmergencyTypeValid(value: any): value is EmergencyType {
  * @param data - form data submitted by user (excluding timestamp)
  * @returns AlertDoc with with required fields, timestamp, and is_official set to false
  */
-export function createAlertDoc(data: Omit<AlertDoc, "timestamp">): AlertDoc {
+function transformAlertData(data: Omit<AlertDoc, "timestamp">): AlertDoc {
   return {
     ...data,
     is_official: false,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   };
 }
 
@@ -47,10 +47,10 @@ export function createAlertDoc(data: Omit<AlertDoc, "timestamp">): AlertDoc {
 export async function saveAlert(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
-    const alert = createAlertDoc(req.body);
+    const alert = transformAlertData(req.body);
 
     if (
       alert.emergency_level !== undefined &&
@@ -61,7 +61,7 @@ export async function saveAlert(
 
     if (!isEmergencyTypeValid(alert.emergency_type)) {
       throw new Error(
-        `Invalid or missing emergency_type: ${alert.emergency_type}`,
+        `Invalid or missing emergency_type: ${alert.emergency_type}`
       );
     }
 
@@ -73,36 +73,26 @@ export async function saveAlert(
 }
 
 /**
- * Retrieves the latest alert document based on the timestamp.
- * Requires an index on the `timestamp` field for efficient Mango query
- * @returns The latest alert document or undefined if none found.
- */
-
-async function getLatestDoc() {
-  const response = await db.find({
-    selector: {},
-    sort: [{ timestamp: "desc" }],
-    limit: 1,
-  });
-  return response.docs[0];
-}
-
-/**
- * Fetches the latest alert document and sends it as JSON response.
+ * Fetches the latest alert document based on the timestamp
+ * and sends it as JSON response.
  * @param res returns the latest document or 404 if none found.
  *
  */
-export async function fetchLatestUpdate(
+export async function fetchLatestAlert(
   _req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
-    const latestDoc = await getLatestDoc();
-    if (!latestDoc) {
+    const response = await db.find({
+      selector: {},
+      sort: [{ timestamp: "desc" }],
+      limit: 1
+    });
+    if (!response.docs.length) {
       return res.status(404).json({ error: "No documents found" });
     }
-    res.json(latestDoc);
+    res.json(response.docs[0]);
   } catch (error) {
     next(error);
   }
@@ -113,20 +103,20 @@ export async function fetchLatestUpdate(
  * Can be adjusted later to allow more alerts to show
  * @param res returns JSON array of recent alert documents.
  */
-export async function fetchLast24HoursUpdates(
+export async function fetchLast24HoursAlerts(
   _req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const twentyFourHoursAgo = dayjs().subtract(24, "hour").toISOString();
 
     const response = await db.find({
       selector: {
-        timestamp: { $gte: twentyFourHoursAgo },
+        timestamp: { $gte: twentyFourHoursAgo }
       },
       sort: [{ timestamp: "desc" }],
-      limit: 5,
+      limit: 5
     });
 
     res.json(response.docs);

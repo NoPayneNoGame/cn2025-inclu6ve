@@ -13,10 +13,10 @@ async function ensureTimestampIndex() {
   try {
     const response = await db.createIndex({
       index: {
-        fields: ["timestamp"],
+        fields: ["timestamp"]
       },
       name: "timestamp-index",
-      type: "json",
+      type: "json"
     });
     console.log("Timestamp index ensured:", response);
   } catch (err: any) {
