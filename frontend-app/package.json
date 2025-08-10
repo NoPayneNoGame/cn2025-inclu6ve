@@ -21,11 +21,11 @@
     "@capacitor/ios": "7.4.2",
     "@capacitor/keyboard": "7.0.1",
     "@capacitor/status-bar": "7.0.1",
-    "@ionic/vue": "^8.0.0",
+    "@ionic/vue": "^8.7.2",
     "@ionic/vue-router": "^8.0.0",
     "@vueuse/core": "^13.5.0",
     "ionicons": "^7.0.0",
-    "vue": "^3.3.0",
+    "vue": "^3.5.18",
     "vue-router": "^4.2.0"
   },
   "devDependencies": {
