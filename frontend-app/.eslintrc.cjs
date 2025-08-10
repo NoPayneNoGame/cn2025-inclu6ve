@@ -1,10 +1,11 @@
 module.exports = {
   root: true,
   env: { node: true },
-  "extends": [
+  extends: [
     "plugin:vue/vue3-essential",
     "eslint:recommended",
     "@vue/typescript/recommended",
+    "prettier",
   ],
   plugins: ["import"],
   parserOptions: {
@@ -17,8 +18,8 @@ module.exports = {
     "no-restricted-imports": ["error", { patterns: [".*"] }],
     "arrow-parens": ["error", "always"],
     "comma-dangle": ["error", "always-multiline"],
-    "semi": ["error", "always", { omitLastInOneLineBlock: true }],
-    "quotes": ["error", "double", { avoidEscape: true }],
+    semi: ["error", "always", { omitLastInOneLineBlock: true }],
+    quotes: ["error", "double", { avoidEscape: true }],
     "import/order": [
       "error",
       {
@@ -37,13 +38,19 @@ module.exports = {
         },
       },
     ],
-    "vue/block-order": ["error", { order: [ "template", "script", "style" ] }],
+    "vue/block-order": ["error", { order: ["template", "script", "style"] }],
     "vue/component-name-in-template-casing": ["error", "kebab-case"],
-    "vue/html-closing-bracket-newline": ["error", { multiline: "always", singleline: "never" }],
+    "vue/html-closing-bracket-newline": [
+      "error",
+      { multiline: "always", singleline: "never" },
+    ],
     "vue/no-deprecated-slot-attribute": "off",
     "vue/script-indent": ["error", 2, { baseIndent: 1, switchCase: 1 }],
     "@typescript-eslint/consistent-type-imports": "error",
-    "@typescript-eslint/no-empty-interface": ["error", { allowSingleExtends: true }],
+    "@typescript-eslint/no-empty-interface": [
+      "error",
+      { allowSingleExtends: true },
+    ],
     "@typescript-eslint/no-namespace": "warn",
   },
 };
