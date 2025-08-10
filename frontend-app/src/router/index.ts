@@ -8,7 +8,7 @@ import WalkthroughPage2 from "@/views/WalkthroughPage2.vue";
 const routes: Array<RouteRecordRaw> = [
   {
     path: "/",
-    redirect: "/home",
+    redirect: "/walkthrough1",
   },
   {
     path: "/home",
@@ -24,7 +24,7 @@ const routes: Array<RouteRecordRaw> = [
     path: "/walkthrough2",
     name: "Walkthrough2",
     component: WalkthroughPage2,
-  }
+  },
 ];
 
 const router = createRouter({
