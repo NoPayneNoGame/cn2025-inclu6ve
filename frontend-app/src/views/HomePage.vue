@@ -5,40 +5,41 @@
         <ion-title>Alerts</ion-title>
       </ion-toolbar>
     </ion-header>
+
     <ion-content v-if="state.loading">
       <div class="loading-center">
         <ion-spinner color="primary"></ion-spinner>
       </div>
     </ion-content>
+
     <ion-content :fullscreen="true" v-else>
       <ion-refresher slot="fixed" @ionRefresh="doRefresh">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <ion-list v-if="state.alerts.length > 0">
-        <ion-card v-for="alert in state.alerts" :key="alert._id || alert.timestamp">
-          <ion-card-header>
-            <ion-card-title>
-              {{ alert.emergency_type }} <span v-if="alert.emergency_level">({{ alert.emergency_level }})</span>
-            </ion-card-title>
-            <ion-card-subtitle>
-              Issued by: {{ alert.issued_by }} | {{ formatDate(alert.timestamp) }}
-            </ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <div v-if="alert.note">{{ alert.note }}</div>
-            <div v-if="alert.affected_area && alert.affected_area.length">
-              <strong>Affected Areas:</strong> {{ alert.affected_area.join(", ") }}
-            </div>
-            <div v-if="alert.response_measures && alert.response_measures.length">
-              <strong>Response Measures:</strong> {{ alert.response_measures.join(", ") }}
-            </div>
-            <div v-if="alert.keywords && alert.keywords.length">
-              <strong>Keywords:</strong> {{ alert.keywords.join(", ") }}
-            </div>
-          </ion-card-content>
-        </ion-card>
+      <ion-list v-if="state.alerts.length > 0" class="alert-list">
+        <ion-item
+          v-for="alert in state.alerts"
+          :key="alert._id || alert.timestamp"
+          class="alert-item"
+          lines="none"
+        >
+          <ion-thumbnail slot="start" class="alert-thumb">
+            <img :src="getAlertIcon(alert)" alt="alert icon" />
+          </ion-thumbnail>
+
+          <ion-label class="alert-label">
+            <h2 class="alert-title">
+              {{ compactTitle(alert) }}
+            </h2>
+          </ion-label>
+
+          <ion-note slot="end" class="alert-time">
+            {{ formatTime(alert.timestamp) }}
+          </ion-note>
+        </ion-item>
       </ion-list>
+
       <div v-else class="no-alerts">
         No alerts in the last 24 hours.
       </div>
@@ -46,76 +47,139 @@
   </ion-page>
 </template>
 
-
 <script setup lang="ts">
-  import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonRefresher, IonRefresherContent, IonList, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent } from "@ionic/vue";
-  import axios from "axios";
-  import { reactive } from "vue";
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonRefresher,
+  IonRefresherContent,
+  IonList,
+  IonItem,
+  IonThumbnail,
+  IonLabel,
+  IonNote,
+  IonSpinner,
+} from "@ionic/vue";
+import axios from "axios";
+import { reactive } from "vue";
+import { getAlertIcon } from "@/mappings/imageMaps";
 
-  // AlertDoc type based on backend/src/types.ts
-  interface AlertDoc {
-    _id?: string;
-    _rev?: string;
-    is_official: boolean;
-    issued_by: string;
-    timestamp: string;
-    emergency_level?: string;
-    emergency_type: string;
-    affected_area: string[];
-    response_measures?: string[];
-    keywords?: string[];
-    note?: string;
+// AlertDoc type aligned with backend/src/types.ts
+interface AlertDoc {
+  _id?: string;
+  _rev?: string;
+  is_official: boolean;
+  issued_by: string;
+  timestamp: string;
+  emergency_level?: string;
+  emergency_type: string;
+  affected_area: string[];
+  response_measures?: string[];
+  keywords?: string[];
+  note?: string;
+}
+
+const state = reactive({
+  alerts: [] as AlertDoc[],
+  loading: false,
+});
+
+const fetchLast24HoursAlerts = async (dispLoaderPage: boolean) => {
+  if (dispLoaderPage) state.loading = true;
+
+  try {
+    const result = await axios.get("http://localhost:3000/alerts/recent");
+    state.alerts = Array.isArray(result.data) ? result.data : [];
+  } catch {
+    state.alerts = [];
   }
 
-  const state = reactive({
-    alerts: [] as AlertDoc[],
-    loading: false,
-  });
+  state.loading = false;
+};
 
-  const fetchLast24HoursAlerts = async (dispLoaderPage: boolean) => {
-    if (dispLoaderPage) {
-      state.loading = true;
-    }
+const doRefresh = (event: CustomEvent) => {
+  fetchLast24HoursAlerts(false);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  event.target?.complete();
+};
 
-    try {
-      const result = await axios.get("http://localhost:8080/alerts/recent");
-      if (Array.isArray(result.data)) {
-        state.alerts = result.data;
-      } else {
-        state.alerts = [];
-      }
-    } catch (e) {
-      state.alerts = [];
-    }
+function compactTitle(alert: AlertDoc) {
+  // Minimal text: "<Level> - <Type>", capitalized
+  const lvl = alert.emergency_level ? capitalize(alert.emergency_level) : "";
+  const typ = capitalize(alert.emergency_type);
+  return lvl ? `${lvl} - ${typ}` : typ;
+}
 
-    state.loading = false;
-  };
+function formatTime(ts: string) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-  const doRefresh = (event: CustomEvent) => {
-    fetchLast24HoursAlerts(false);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    event.target?.complete();
-  };
+function capitalize(s?: string) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
-  function formatDate(ts: string) {
-    const d = new Date(ts);
-    return d.toLocaleString();
-  }
-
-  fetchLast24HoursAlerts(true);
+fetchLast24HoursAlerts(true);
 </script>
 
 <style>
-.loading-center{
+.loading-center {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 90vh;
 }
-ion-spinner{
+ion-spinner {
   transform: scale(1.5);
 }
+
+/* Minimal, image-oriented list design */
+.alert-list {
+  padding: 8px 12px;
+}
+
+.alert-item {
+  margin: 10px 0;
+  border-radius: 12px;
+  --background: var(--ion-card-background, #1f1f1f);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  padding: 6px 8px;
+}
+
+.alert-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.alert-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.alert-label {
+  margin-left: 6px;
+}
+
+.alert-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.alert-time {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
 .no-alerts {
   text-align: center;
   margin-top: 2rem;

@@ -12,7 +12,7 @@ interface Config {
 export const config: Config = {
   port: Number(process.env.PORT) || 3000,
   nodeEnv: process.env.NODE_ENV || "development",
-  dbUrl: process.env.DB_URL || "http://127.0.0.1:5984",
+  dbUrl: process.env.DB_URL || "http://admin:admin@127.0.0.1:5984",
   dbName: process.env.DB_NAME || "default_db"
 };
 

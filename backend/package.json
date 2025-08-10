@@ -14,6 +14,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.1",
     "dotenv": "^17.2.1",
@@ -27,6 +28,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "nano": "^10.1.4"
   }
