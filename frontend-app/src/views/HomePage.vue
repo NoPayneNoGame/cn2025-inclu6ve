@@ -1,47 +1,47 @@
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>Alerts</ion-title>
+        <ion-title>Recent Alerts</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content v-if="state.loading">
-      <div class="loading-center">
-        <ion-spinner color="primary"></ion-spinner>
-      </div>
-    </ion-content>
-
-    <ion-content :fullscreen="true" v-else>
+    <ion-content :fullscreen="true">
       <ion-refresher slot="fixed" @ionRefresh="doRefresh">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <ion-list v-if="state.alerts.length > 0" class="alert-list">
-        <ion-item
-          v-for="alert in state.alerts"
-          :key="alert._id || alert.timestamp"
-          class="alert-item"
-          lines="none"
-        >
-          <ion-thumbnail slot="start" class="alert-thumb">
-            <img :src="getAlertIcon(alert)" alt="alert icon" />
-          </ion-thumbnail>
+      <div v-if="state.loading" class="loading-center">
+        <ion-spinner color="primary"></ion-spinner>
+      </div>
 
-          <ion-label class="alert-label">
-            <h2 class="alert-title">
+      <div v-else-if="state.alerts.length > 0" class="alert-list-container">
+        <div v-for="alert in state.alerts" :key="alert._id" class="alert-card">
+          <!-- Icons row (all keyword icons, same size, same row, centered) -->
+          <div class="card-icons-row">
+            <img
+              v-for="(icon, idx) in getKeywordIcons(alert)"
+              :key="idx"
+              :src="icon"
+              alt="Alert icon"
+              class="icon-xl"
+            />
+          </div>
+
+          <!-- Text block (centered under icons) -->
+          <div class="card-meta">
+            <div class="card-title">
               {{ compactTitle(alert) }}
-            </h2>
-          </ion-label>
-
-          <ion-note slot="end" class="alert-time">
-            {{ formatTime(alert.timestamp) }}
-          </ion-note>
-        </ion-item>
-      </ion-list>
+            </div>
+            <div class="card-time">
+              {{ formatTime(alert.timestamp) }}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div v-else class="no-alerts">
-        No alerts in the last 24 hours.
+        <p>No alerts in the last 24 hours.</p>
       </div>
     </ion-content>
   </ion-page>
@@ -56,133 +56,131 @@ import {
   IonContent,
   IonRefresher,
   IonRefresherContent,
-  IonList,
-  IonItem,
-  IonThumbnail,
-  IonLabel,
-  IonNote,
   IonSpinner,
+  type RefresherCustomEvent,
 } from "@ionic/vue";
 import axios from "axios";
-import { reactive } from "vue";
-import { getAlertIcon } from "@/mappings/imageMaps";
-
-// AlertDoc type aligned with backend/src/types.ts
-interface AlertDoc {
-  _id?: string;
-  _rev?: string;
-  is_official: boolean;
-  issued_by: string;
-  timestamp: string;
-  emergency_level?: string;
-  emergency_type: string;
-  affected_area: string[];
-  response_measures?: string[];
-  keywords?: string[];
-  note?: string;
-}
+import { onMounted, reactive } from "vue";
+import { getKeywordIcons } from "@/mappings/imageMaps";
+import type { AlertDoc } from "@/types/alerts";
 
 const state = reactive({
   alerts: [] as AlertDoc[],
   loading: false,
 });
 
-const fetchLast24HoursAlerts = async (dispLoaderPage: boolean) => {
-  if (dispLoaderPage) state.loading = true;
-
+const fetchLast24HoursAlerts = async (showLoader = false) => {
+  if (showLoader) state.loading = true;
   try {
     const result = await axios.get("http://localhost:3000/alerts/recent");
     state.alerts = Array.isArray(result.data) ? result.data : [];
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch alerts:", error);
     state.alerts = [];
+  } finally {
+    if (showLoader) state.loading = false;
   }
-
-  state.loading = false;
 };
 
-const doRefresh = (event: CustomEvent) => {
-  fetchLast24HoursAlerts(false);
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  event.target?.complete();
+const doRefresh = async (event: RefresherCustomEvent) => {
+  await fetchLast24HoursAlerts();
+  event.target.complete();
 };
 
-function compactTitle(alert: AlertDoc) {
-  // Minimal text: "<Level> - <Type>", capitalized
-  const lvl = alert.emergency_level ? capitalize(alert.emergency_level) : "";
-  const typ = capitalize(alert.emergency_type);
-  return lvl ? `${lvl} - ${typ}` : typ;
-}
+const compactTitle = (alert: AlertDoc) => {
+  const level = alert.emergency_level ? capitalize(alert.emergency_level) : "";
+  const type = capitalize(alert.emergency_type);
+  return level ? `${level} - ${type}` : type;
+};
 
-function formatTime(ts: string) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+const formatTime = (timestamp: string) => {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-function capitalize(s?: string) {
+const capitalize = (s: string) => {
   if (!s) return "";
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+  return s.replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
-fetchLast24HoursAlerts(true);
+onMounted(() => {
+  fetchLast24HoursAlerts(true);
+});
 </script>
 
-<style>
-.loading-center {
+<style scoped>
+ion-content {
+  --background: #f4f5f8;
+}
+
+.alert-list-container {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+/* White rectangle with subtle shadow */
+.alert-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card-icons-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 90vh;
-}
-ion-spinner {
-  transform: scale(1.5);
-}
-
-/* Minimal, image-oriented list design */
-.alert-list {
-  padding: 8px 12px;
-}
-
-.alert-item {
-  margin: 10px 0;
-  border-radius: 12px;
-  --background: var(--ion-card-background, #1f1f1f);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-  padding: 6px 8px;
-}
-
-.alert-thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.alert-thumb img {
+  gap: 14px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 8px;
   width: 100%;
-  height: 100%;
+}
+
+.icon-xl {
+  width: 120px;
+  height: 120px;
+  flex: 0 0 120px; 
   object-fit: contain;
+  filter: none;
+  border-radius: 8px;
 }
 
-.alert-label {
-  margin-left: 6px;
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
 }
 
-.alert-title {
-  margin: 0;
-  font-size: 18px;
+.card-title {
+  font-size: 1rem;
   font-weight: 700;
-}
-
-.alert-time {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.no-alerts {
+  color: #1d1d1f;
   text-align: center;
-  margin-top: 2rem;
-  color: #888;
+}
+
+.card-time {
+  font-size: 0.95rem;
+  color: #1d1d1f;
+  font-weight: 700;
+  text-align: center;
+}
+
+.loading-center,
+.no-alerts {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+  color: #8a8a8e;
 }
 </style>
