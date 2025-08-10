@@ -13,11 +13,25 @@ import android.util.Log;
 import androidx.annotation.RequiresPermission;
 
 public class BluetoothMesh {
-  private static final String TAG = "AlertoBLE";
 
-  private static final UUID SERVICE_UUID = UUID.fromString("uuid_goes_here");
-  private static final UUID CHAR_INDEX_UUID = UUID.fromString("uuid_goes_here"); // read
-  private static final UUID CHAR_ALERT_UUID = UUID.fromString("uuid_goes_here"); // write
+
+  private static class InputBuffer {
+    final BluetoothDevice device;
+    final UUID charUUID;
+    public final List<byte[]> bytes;
+
+    InputBuffer(BluetoothDevice device, UUID charUUID, byte[] value) {
+      this.device = device;
+      this.charUUID = charUUID;
+      this.bytes = new ArrayList<>();
+      this.bytes.add(value);
+    }
+  }
+
+  private static final String TAG = "AlertoBLE";
+  private static final UUID SERVICE_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070");
+  private static final UUID CHAR_INDEX_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070"); // read
+  private static final UUID CHAR_ALERT_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070"); // write
 
   private static final ParcelUuid ADVERTISE_PARCEL_UUID = new ParcelUuid(SERVICE_UUID);
 
@@ -26,6 +40,25 @@ public class BluetoothMesh {
   private BluetoothLeAdvertiser advertiser;
   private BluetoothGattServer gattServer;
   private BluetoothLeScanner scanner;
+
+  public interface OnAlertReceivedListener {
+    void onAlertReceived(String id, String payload);
+  }
+
+  private OnAlertReceivedListener alertListener;
+
+  private List<InputBuffer> inputBuffers = new LinkedList<>();
+
+  private  void handleInputFragment(BluetoothDevice device, UUID charUuid, byte[] value) {
+    Log.d(TAG, "handling input fragment");
+    for (InputBuffer buff : inputBuffers) {
+      if (buff.device.equals(device)) {
+        buff.bytes.add(value);
+        return;
+      }
+    }
+    inputBuffers.add(new InputBuffer(device, charUuid, value));
+  }
 
   // Mock db, TODO: update
   private final Map<String, String> localAlerts = new HashMap<>();
@@ -46,7 +79,7 @@ public class BluetoothMesh {
 
     // dummy data :)
     localAlerts.put("alert1", "Danger");
-    localAlerts.put("alert2", "BAD Danger!!!!");
+//    localAlerts.put("alert3", "BAD Danger!!!!");
   }
 
   @RequiresPermission(allOf = { Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE,
@@ -55,6 +88,21 @@ public class BluetoothMesh {
     startGattServer();
     startAdvertising();
     startScanning();
+  }
+
+  @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT})
+  public void stop() {
+    if (advertiser != null) advertiser.stopAdvertising(advertiseCallback);
+    if (scanner != null) scanner.stopScan(scanCallback);
+    if (gattServer != null) gattServer.close();
+
+    for (BluetoothGatt g : activeGatts.values()) {
+      if (g != null) g.close();
+    }
+  }
+
+  public void addAlertListener(OnAlertReceivedListener listener) {
+    this.alertListener = listener;
   }
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -81,13 +129,33 @@ public class BluetoothMesh {
     service.addCharacteristic(indexChar);
     service.addCharacteristic(alertChar);
     gattServer.addService(service);
-    Log.d(TAG, "GATT server service added.");
+    Log.i(TAG, "GATT server service added.");
   }
 
   private final BluetoothGattServerCallback gattServerCallback = new BluetoothGattServerCallback() {
     @Override
     public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
       Log.i(TAG, "GATT Server connection change. Device=" + device.getAddress() + " state=" + newState);
+    }
+
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    @Override
+    public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
+      super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
+      Log.i(TAG, "oncharwreq: " + value.length + " bytes");
+      if (preparedWrite) {
+        handleInputFragment(device, characteristic.getUuid(), value);
+      } else {
+        handleMessageInput(device, characteristic.getUuid(), value);
+      }
+
+      if (responseNeeded) {
+        Log.i(TAG, "sending response");
+        if (!gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, new byte[0])) {
+          Log.e(TAG, "sending resopnse failed");
+        }
+      }
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -97,40 +165,62 @@ public class BluetoothMesh {
         String index = String.join(",", localAlerts.keySet());
         byte[] payload = index.getBytes(StandardCharsets.UTF_8);
         gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, payload);
-        Log.d(TAG, "Served index to " + device.getAddress() + ": " + index);
+        Log.i(TAG, "Served index to " + device.getAddress() + ": " + index);
       } else {
         gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null);
       }
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId,
-        BluetoothGattCharacteristic characteristic, boolean preparedToWrite, boolean responseNeeded, int offset,
-        byte[] value) {
-      if (CHAR_ALERT_UUID.equals(characteristic.getUuid())) {
-        String s = new String(value, StandardCharsets.UTF_8);
-        String[] parts = s.split("\\|", 2);
-        if (parts.length == 2) {
-          String id = parts[0];
-          String payload = parts[1];
-          localAlerts.put(id, payload);
+    void handleMessageInput(BluetoothDevice device, UUID uuid, byte[] value) {
+      String s = new String(value, StandardCharsets.UTF_8);
+      String[] parts = s.split("\\|", 2);
+      if (parts.length == 2) {
+        String id = parts[0];
+        String payload = parts[1];
+        localAlerts.put(id, payload);
 
-          if (responseNeeded) {
-            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
-            return;
-          }
+        Log.i(TAG, "ALERT RECEIVED sending to listener:" + (alertListener != null ? "true" : "false"));
+        if (alertListener != null) {
+          alertListener.onAlertReceived(id, payload);
         }
       }
-      if (responseNeeded) {
-        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null);
-      }
     }
+
+//    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+//    public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId,
+//        BluetoothGattCharacteristic characteristic, boolean preparedToWrite, boolean responseNeeded, int offset,
+//        byte[] value) {
+//
+//      Log.i(TAG, "ON CHARAFTR WRITE REQUEST " + characteristic.getUuid());
+//      if (CHAR_ALERT_UUID.equals(characteristic.getUuid())) {
+//        String s = new String(value, StandardCharsets.UTF_8);
+//        String[] parts = s.split("\\|", 2);
+//        if (parts.length == 2) {
+//          String id = parts[0];
+//          String payload = parts[1];
+//          localAlerts.put(id, payload);
+//
+//          Log.i(TAG, "ALERT RECEIVED sending to listener:" + (alertListener != null ? "true" : "false"));
+//          if (alertListener != null) {
+//            alertListener.onAlertReceived(id, payload);
+//          }
+//
+//          if (responseNeeded) {
+//            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
+//            return;
+//          }
+//        }
+//      }
+//      if (responseNeeded) {
+//        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null);
+//      }
+//    }
   };
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
   private void startAdvertising() {
     if (!bluetoothAdapter.isMultipleAdvertisementSupported()) {
-      Log.d(TAG, "Device does not support BLE advertising");
+      Log.e(TAG, "Device does not support BLE advertising");
       return;
     }
 
@@ -150,18 +240,18 @@ public class BluetoothMesh {
         .addServiceUuid(ADVERTISE_PARCEL_UUID)
         .build();
     advertiser.startAdvertising(settings, data, advertiseCallback);
-    Log.d(TAG, "started advertising");
+    Log.i(TAG, "Started advertising");
   }
 
   private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
     @Override
     public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-      Log.d(TAG, "Advertising onStartSuccess");
+      Log.i(TAG, "Advertising onStartSuccess");
     }
 
     @Override
     public void onStartFailure(int errorCode) {
-      Log.d(TAG, "Advertising failed:" + errorCode);
+      Log.e(TAG, "Advertising failed:" + errorCode);
     }
   };
 
@@ -190,8 +280,8 @@ public class BluetoothMesh {
     public void onScanResult(int callbackType, ScanResult result) {
       BluetoothDevice device = result.getDevice();
       String key = device.getAddress();
-      Log.i(TAG, "Found potential peer: " + key + " name=" + device.getName());
       if (!activeGatts.containsKey(key)) {
+        Log.i(TAG, "Found potential peer: " + key + " name=" + device.getName());
         connectToDevice(device);
       }
     }
@@ -201,6 +291,11 @@ public class BluetoothMesh {
   private void connectToDevice(BluetoothDevice device) {
     BluetoothGatt gatt = device.connectGatt(context, false, clientGattCallback);
     activeGatts.put(device.getAddress(), gatt);
+    Log.i(TAG, "Connected to: " + device.getAddress());
+
+    if (alertListener != null) {
+      alertListener.onAlertReceived("abc123", "Danger, danger! High voltage!");
+    }
   }
 
   private final BluetoothGattCallback clientGattCallback = new BluetoothGattCallback() {
@@ -285,12 +380,12 @@ public class BluetoothMesh {
         String payload = id + "|" + localAlerts.get(id);
         alertChar.setValue(payload.getBytes(StandardCharsets.UTF_8));
         boolean ok = gatt.writeCharacteristic(alertChar);
-        Log.i(TAG, "Writing alert " + id + " -> " + ok);
+        Log.i(TAG, "Writing alert " + id + ", payload " + payload + " -> " + ok);
         // NOTE: synchronous waiting for onCharacteristicWrite is better; here we just
         // fire writes.
       }
       // after writes, disconnect
-      gatt.disconnect();
+//      gatt.disconnect();
     }
 
     @Override
