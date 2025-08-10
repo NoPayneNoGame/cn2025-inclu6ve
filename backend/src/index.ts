@@ -2,8 +2,10 @@ import express from "express";
 import config from "./config";
 import routes from "./routes";
 import { errorHandler } from "./errorHandler";
+import cors from "cors";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Routes
