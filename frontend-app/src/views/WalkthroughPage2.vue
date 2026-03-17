@@ -1,25 +1,3 @@
-<style scoped>
-  /* This style is for demonstration purposes only. */
-  /* It's not required for the tabs to function. */
-  ion-content::part(scroll) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .example-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100%;
-  }
-  .ion-toolbar {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-</style>
 <template>
   <ion-page>
       <div id="home-page">
@@ -43,23 +21,38 @@
     </ion-item>
   </ion-page>
 </template>
-
 <script setup lang="ts">
   import {
-    IonTabs,
     IonPage,
     IonItem,
-    IonTab,
-    IonRouterOutlet,
-    IonToolbar,
     IonButton,
     IonContent,
     IonHeader,
-    IonTitle,
-    IonIcon,
-    IonFooter,
-  } from '@ionic/vue';
-
-  import { playCircle, radio, library, search } from 'ionicons/icons';
+  } from "@ionic/vue";
 
 </script>
+
+<style scoped>
+  /* This style is for demonstration purposes only. */
+  /* It's not required for the tabs to function. */
+  ion-content::part(scroll) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .example-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+  }
+  .ion-toolbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+
+  }
+</style>

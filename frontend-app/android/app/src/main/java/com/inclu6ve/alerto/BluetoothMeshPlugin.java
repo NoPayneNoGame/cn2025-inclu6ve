@@ -1,4 +1,4 @@
-package com.inclu6ve.alerto;
+package com.inclu6ve.echo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -24,7 +24,7 @@ public class BluetoothMeshPlugin extends Plugin {
 
   BluetoothMesh bleMesh = new BluetoothMesh();
   Context context;
-  private static final String TAG = "AlertoBLEPlugin";
+  private static final String TAG = "EchoBLEPlugin";
 
   @SuppressLint("MissingPermission")
   @Override

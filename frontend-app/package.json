@@ -1,5 +1,5 @@
 {
-  "name": "inclu6ve-alerto",
+  "name": "inclu6ve-echo",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -24,6 +24,7 @@
     "@ionic/vue": "^8.7.2",
     "@ionic/vue-router": "^8.0.0",
     "@vueuse/core": "^13.5.0",
+    "axios": "^1.11.0",
     "ionicons": "^7.0.0",
     "pouchdb-browser": "^9.0.0",
     "vue": "^3.5.18",

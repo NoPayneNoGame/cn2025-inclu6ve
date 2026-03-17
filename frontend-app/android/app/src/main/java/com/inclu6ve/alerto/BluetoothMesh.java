@@ -1,4 +1,4 @@
-package com.inclu6ve.alerto;
+package com.inclu6ve.echo;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -28,7 +28,7 @@ public class BluetoothMesh {
     }
   }
 
-  private static final String TAG = "AlertoBLE";
+  private static final String TAG = "EchoBLE";
   private static final UUID SERVICE_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070");
   private static final UUID CHAR_INDEX_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070"); // read
   private static final UUID CHAR_ALERT_UUID = UUID.fromString("84d3472a-2098-47e3-8475-699fdde69070"); // write

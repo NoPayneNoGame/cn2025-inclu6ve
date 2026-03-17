@@ -8,6 +8,7 @@ export interface AlertPayload {
   response_measures: string[];
   keywords: string[];
   note: string;
+  timestamp: string;
 }
 
 export interface Alert {

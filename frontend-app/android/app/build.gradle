@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.inclu6ve.alerto"
+    namespace "com.inclu6ve.echo"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.inclu6ve.alerto"
+        applicationId "com.inclu6ve.echo"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

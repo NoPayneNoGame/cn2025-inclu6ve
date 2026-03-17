@@ -18,7 +18,7 @@
       <div v-else-if="state.alerts.length > 0" class="alert-list-container">
         <div
           v-for="alert in state.alerts"
-          :key="alert._id"
+          :key="alert.id"
           class="alert-card"
           @click="openAlertModal(alert)"
 >
@@ -39,7 +39,7 @@
               {{ compactTitle(alert) }}
             </div>
             <div class="card-time">
-              {{ formatTime(alert.timestamp) }}
+              {{ formatTime(alert.data.timestamp) }}
             </div>
           </div>
         </div>
@@ -54,8 +54,8 @@
           <ion-toolbar>
             <ion-title>
               {{
-                selectedAlert?.emergency_level
-                  ? capitalize(selectedAlert.emergency_level)
+                selectedAlert?.data.emergency_level
+                  ? capitalize(selectedAlert.data.emergency_level)
                   : "Alert"
               }}
             </ion-title>
@@ -81,32 +81,32 @@
               <strong>{{ compactTitle(selectedAlert) }}</strong>
             </div>
             <div class="modal-time">
-              <strong>{{ formatTime(selectedAlert.timestamp) }}</strong>
+              <strong>{{ formatTime(selectedAlert.data.timestamp) }}</strong>
             </div>
 
             <div class="modal-grid">
-              <p><strong>Issued by:</strong> {{ selectedAlert.issued_by }}</p>
-              <p v-if="selectedAlert.affected_area?.length">
+              <p><strong>Issued by:</strong> {{ selectedAlert.data.issued_by }}</p>
+              <p v-if="selectedAlert.data.affected_area?.length">
                 <strong>Affected area:</strong>
-                {{ selectedAlert.affected_area.join(", ") }}
+                {{ selectedAlert.data.affected_area.join(", ") }}
               </p>
-              <div v-if="selectedAlert.response_measures?.length">
+              <div v-if="selectedAlert.data.response_measures?.length">
                 <strong>Response measures:</strong>
                 <ul>
                   <li
-                    v-for="(m, idx) in selectedAlert.response_measures"
+                    v-for="(m, idx) in selectedAlert.data.response_measures"
                     :key="idx"
                   >
                     {{ m }}
                   </li>
                 </ul>
               </div>
-              <p v-if="selectedAlert.note">
-                <strong>Note:</strong> {{ selectedAlert.note }}
+              <p v-if="selectedAlert.data.note">
+                <strong>Note:</strong> {{ selectedAlert.data.note }}
               </p>
-              <p v-if="selectedAlert.keywords?.length">
+              <p v-if="selectedAlert.data.keywords?.length">
                 <strong>Keywords:</strong>
-                {{ selectedAlert.keywords.join(", ") }}
+                {{ selectedAlert.data.keywords.join(", ") }}
               </p>
             </div>
           </div>
@@ -130,10 +130,11 @@
   import { onMounted, reactive, ref } from "vue";
 
   import { getKeywordIcons } from "@/mappings/imageMaps";
-  import type { AlertDoc } from "@/types/alerts";
+  import type { Alert } from "@/plugins/BluetoothMesh";
+  import { useBluetoothAlerts } from "@/plugins/useBluetoothAlerts";
 
   const state = reactive({
-    alerts: [] as AlertDoc[],
+    alerts: [] as Alert[],
     loading: false,
   });
 
@@ -155,9 +156,9 @@
     event.target.complete();
   };
 
-  const compactTitle = (alert: AlertDoc) => {
-    const level = alert.emergency_level ? capitalize(alert.emergency_level) : "";
-    const type = capitalize(alert.emergency_type);
+  const compactTitle = (alert: Alert) => {
+    const level = alert.data.emergency_level ? capitalize(alert.data.emergency_level) : "";
+    const type = capitalize(alert.data.emergency_type);
     return level ? `${level} - ${type}` : type;
   };
 
@@ -173,14 +174,20 @@
     return s.replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
-  onMounted(() => {
+  onMounted(async () => {
     fetchLast24HoursAlerts(true);
+    const { onAlert } = await useBluetoothAlerts(true);
+
+    onAlert((alert) => {
+      console.log(alert);
+      state.alerts.push(alert);
+    });
   });
 
   const showModal = ref(false);
-  const selectedAlert = ref<AlertDoc | null>(null);
+  const selectedAlert = ref<Alert | null>(null);
 
-  function openAlertModal(alert: AlertDoc) {
+  function openAlertModal(alert: Alert) {
     selectedAlert.value = alert;
     showModal.value = true;
   }

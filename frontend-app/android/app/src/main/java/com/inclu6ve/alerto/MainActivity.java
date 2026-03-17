@@ -1,4 +1,4 @@
-package com.inclu6ve.alerto;
+package com.inclu6ve.echo;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

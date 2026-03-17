@@ -1,23 +1,21 @@
 <template>
   <ion-page>
-      <div id="home-page">
-        <ion-header>
-        </ion-header>
-        <ion-content :fullscreen="true" class="ion-padding">
-          <div class="example-content">
+    <div id="home-page">
+      <ion-content :fullscreen="true" class="ion-padding">
+        <div class="example-content">
           <img src ="/bluetooth-icon.svg"/>
-          <ion-toggle @click="onClick" :checked="false"></ion-toggle><br /><br />
+          <ion-toggle :checked="false"></ion-toggle><br /><br />
           <h3>Turn on Bluetooth and location to receive the alert.</h3>
-          </div>
-        </ion-content>
-      </div>
+        </div>
+      </ion-content>
+    </div>
 
     <ion-item class="ion-toolbar">
-    <ion-button :disabled = "true" slot="start" fill="clear">
-          <ion-label>Prev</ion-label>
+      <ion-button :disabled = "true" slot="start" fill="clear">
+        <ion-label>Prev</ion-label>
       </ion-button>
       <ion-button slot="end" fill="clear" href="/walkthrough2">
-          <ion-label>Next</ion-label>
+        <ion-label>Next</ion-label>
       </ion-button>
     </ion-item>
   </ion-page>
@@ -28,15 +26,7 @@
     IonItem,
     IonButton,
     IonContent,
-    IonHeader,
   } from "@ionic/vue";
-
-  import { useBluetoothAlerts } from "@/plugins/useBluetoothAlerts";
-
-  const { start } = await useBluetoothAlerts();
-  async function onClick() {
-    start();
-  }
 </script>
 
 <style scoped>
@@ -59,5 +49,6 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    margin-bottom: 20px;
   }
 </style>

@@ -1,14 +1,14 @@
-import type { AlertDoc } from "@/types/alerts";
 
-import defaultIcon from "@/assets/alerts/default.png";
 import adviceIcon from "@/assets/alerts/advice.png";
+import defaultIcon from "@/assets/alerts/default.png";
 import emergencyIcon from "@/assets/alerts/emergency_warning.png";
-import watchAndActIcon from "@/assets/alerts/watch_and_act.png";
 import evacuateIcon from "@/assets/alerts/evacuation.jpg";
 import fireIcon from "@/assets/alerts/fire.jpg";
-import tsunamiIcon from "@/assets/alerts/tsunami.png";
 import moveHigherGroundIcon from "@/assets/alerts/move_to_higher_ground.jpg";
 import secureLooseItems from "@/assets/alerts/secure_loose_object.png";
+import tsunamiIcon from "@/assets/alerts/tsunami.png";
+import watchAndActIcon from "@/assets/alerts/watch_and_act.png";
+import type { Alert } from "@/plugins/BluetoothMesh";
 
 // Single source of truth: keyword -> icon
 // Keys are lowercase, normalized (spaces).
@@ -35,10 +35,10 @@ function norm(s: string): string {
 
 // Return ALL matching icons (deduped) based only on keywords.
 // Order follows the order in alert.keywords.
-export function getKeywordIcons(alert: AlertDoc): string[] {
+export function getKeywordIcons(alert: Alert): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  const kws = alert.keywords ?? [];
+  const kws = alert.data.keywords ?? [];
   for (const kw of kws) {
     const key = norm(kw);
     const icon = KEYWORD_ICONS_MAP[key];
@@ -51,6 +51,6 @@ export function getKeywordIcons(alert: AlertDoc): string[] {
 }
 
 // Back-compat: first icon only (used if a single image is needed)
-export function getAlertIcon(alert: AlertDoc): string {
+export function getAlertIcon(alert: Alert): string {
   return getKeywordIcons(alert)[0];
 }

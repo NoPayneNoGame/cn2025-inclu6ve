@@ -7,6 +7,7 @@ const bleInit = ref(false);
 const bleStarted = ref(false);
 
 const alertsIssued = ref(0);
+const alerts = new Set<string>();
 
 const hardCodedAlerts = [
   {
@@ -17,6 +18,7 @@ const hardCodedAlerts = [
     response_measures: ["Evacuate Immediately"],
     keywords: ["fire", "evacuation"],
     note: "Bush fire moving rapidly.",
+    timestamp: new Date().toISOString(),
   },
   {
     issued_by: "Concerned",
@@ -26,6 +28,7 @@ const hardCodedAlerts = [
     response_measures: ["Evacuate to higher ground", "Secure loose objects"],
     keywords: ["tsunami", "evacuation"],
     note: "Tsunami warning issued following earthquake.",
+    timestamp: new Date().toISOString(),
   },
 ];
 
@@ -50,6 +53,13 @@ export async function useBluetoothAlerts(startAutomatically = false) {
   async function onAlert(cb: (alert: Alert) => void) {
     if (!bleStarted.value) throw new Error("Bluetooth not started");
     await BluetoothMesh.addListener("alert", (alert) => {
+      if (alerts.has(alert.id)) return;
+      alerts.add(alert.id);
+
+      if (alertsIssued.value > hardCodedAlerts.length) {
+        return;
+      }
+
       const data = hardCodedAlerts[alertsIssued.value];
       alertsIssued.value += 1;
       cb({ id: alert.id, data });
